@@ -181,10 +181,19 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
+    # Clear the session
     logout_user()
     session.clear()
+    session.pop('_flashes', None)  # Clear flash messages
+    
+    # Create a response and redirect
+    response = redirect(url_for('login'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
     flash('✅ You have been logged out successfully.', 'info')
-    return redirect(url_for('login'))
+    return response
 
 # ============ PROTECTED ROUTES (LOGIN REQUIRED) ============
 
@@ -260,7 +269,6 @@ def dashboard():
     except Exception as e:
         app.logger.error(f"Dashboard error: {str(e)}")
         flash(f'Error loading dashboard: {str(e)}', 'danger')
-        # Fallback to a simple dashboard template if the main one fails
         return render_template('dashboard_fallback.html', error=str(e))
 
 # ============ USER MANAGEMENT (Admin Only - Login Required) ============
