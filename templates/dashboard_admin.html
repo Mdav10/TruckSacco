@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-1">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Members</div>
+                    <div class="stat-number">{{ total_members }}</div>
+                    <small class="text-muted">Active: {{ active_members }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-2">
+        <div class="stat-card secondary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Active Loans</div>
+                    <div class="stat-number">{{ active_loans }}</div>
+                    <small class="text-muted">Total: {{ total_loans }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-coin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-3">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Savings</div>
+                    <div class="stat-number">UGX {{ "{:,.0f}".format(total_savings) }}</div>
+                    <small class="text-muted">Share Capital: UGX {{ "{:,.0f}".format(total_share_capital) }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-piggy-bank"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-4">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Today's Activity</div>
+                    <div class="stat-number">{{ today_transactions }}</div>
+                    <small class="text-muted">UGX {{ "{:,.0f}".format(today_amount) }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Only Stats -->
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-6 col-lg-3 animate-in">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-number">{{ total_users }}</div>
+                    <small class="text-muted">System accounts</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3 animate-in">
+        <div class="stat-card danger">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Disbursed</div>
+                    <div class="stat-number">UGX {{ "{:,.0f}".format(total_loan_amount) }}</div>
+                    <small class="text-muted">Outstanding: UGX {{ "{:,.0f}".format(total_loan_balance) }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row g-3 g-md-4">
+    <div class="col-lg-7 animate-in">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-clock-history"></i> Recent Transactions</h5>
+                <a href="{{ url_for('transactions') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body-custom p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Member</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in recent_transactions %}
+                            <tr>
+                                <td><small>{{ txn.transaction_date.strftime('%H:%M') }}</small></td>
+                                <td>{{ txn.member.name[:15] }}{% if txn.member.name|length > 15 %}...{% endif %}</td>
+                                <td>
+                                    <span class="badge-custom {% if txn.type == 'deposit' %}active{% elif txn.type == 'withdrawal' %}inactive{% elif txn.type == 'loan_disbursement' %}pending{% else %}overdue{% endif %}">
+                                        {{ txn.type.replace('_', ' ')[:10] }}
+                                    </span>
+                                </td>
+                                <td>UGX {{ "{:,.0f}".format(txn.amount) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 animate-in animate-in-delay-2">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-file-earmark-text"></i> Recent Loans</h5>
+                <a href="{{ url_for('loans') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body-custom p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Loan No</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in recent_loans %}
+                            <tr>
+                                <td><a href="{{ url_for('loan_detail', id=loan.id) }}">{{ loan.loan_no }}</a></td>
+                                <td>UGX {{ "{:,.0f}".format(loan.amount) }}</td>
+                                <td>
+                                    <span class="badge-custom {% if loan.status == 'active' %}pending{% elif loan.status == 'paid' %}active{% else %}inactive{% endif %}">
+                                        {{ loan.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loan Stats -->
+<div class="row mt-3 g-3 g-md-4">
+    <div class="col-12 animate-in animate-in-delay-3">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-pie-chart"></i> Loan Statistics</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-2">
+                    {% for stat in loan_stats %}
+                    <div class="col-4 col-md-3">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="stat-label">{{ stat.status|title }}</div>
+                            <h5 class="mb-0">{{ stat.count }}</h5>
+                            <small class="text-muted">UGX {{ "{:,.0f}".format(stat.balance or 0) }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

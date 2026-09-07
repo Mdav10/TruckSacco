@@ -2,25 +2,25 @@
 
 {% block content %}
 <div class="alert alert-warning">
-    <h4><i class="bi bi-exclamation-triangle"></i> Dashboard Error</h4>
-    <p>{{ error }}</p>
+    <h4><i class="bi bi-exclamation-triangle"></i> Dashboard Loading Issue</h4>
+    <p>Error: {{ error }}</p>
     <hr>
-    <p>Please try the following:</p>
-    <ul>
-        <li>Check your database connection</li>
-        <li>Visit <a href="/init_db">/init_db</a> to initialize tables</li>
-        <li>Contact support if the issue persists</li>
-    </ul>
+    <p>Please try these steps:</p>
+    <ol>
+        <li>Visit <a href="/init_db" target="_blank">/init_db</a> to initialize database</li>
+        <li>Logout and login again</li>
+        <li>Check if tables exist in your database</li>
+    </ol>
 </div>
 
-<!-- Quick Stats (basic) -->
+<!-- Basic Stats -->
 <div class="row g-3 g-md-4">
     <div class="col-6 col-md-3">
         <div class="stat-card primary">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="stat-label">Members</div>
-                    <div class="stat-number">{{ Member.query.count() if Member else 0 }}</div>
+                    <div class="stat-number">{{ total_members }}</div>
                 </div>
                 <div class="stat-icon"><i class="bi bi-people"></i></div>
             </div>
@@ -31,7 +31,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="stat-label">Loans</div>
-                    <div class="stat-number">{{ Loan.query.count() if Loan else 0 }}</div>
+                    <div class="stat-number">{{ total_loans }}</div>
                 </div>
                 <div class="stat-icon"><i class="bi bi-coin"></i></div>
             </div>
@@ -42,7 +42,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="stat-label">Savings</div>
-                    <div class="stat-number">UGX 0</div>
+                    <div class="stat-number">UGX {{ "{:,.0f}".format(total_savings) }}</div>
                 </div>
                 <div class="stat-icon"><i class="bi bi-piggy-bank"></i></div>
             </div>
@@ -53,7 +53,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="stat-label">Transactions</div>
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ today_transactions }}</div>
                 </div>
                 <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
             </div>

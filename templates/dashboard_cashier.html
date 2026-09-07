@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-1">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Members</div>
+                    <div class="stat-number">{{ total_members }}</div>
+                    <small class="text-muted">Active: {{ active_members }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-2">
+        <div class="stat-card secondary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Active Loans</div>
+                    <div class="stat-number">{{ active_loans }}</div>
+                    <small class="text-muted">Total: {{ total_loans }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-coin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-3">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Savings</div>
+                    <div class="stat-number">UGX {{ "{:,.0f}".format(total_savings) }}</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-piggy-bank"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3 animate-in animate-in-delay-4">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Today's Activity</div>
+                    <div class="stat-number">{{ today_transactions }}</div>
+                    <small class="text-muted">UGX {{ "{:,.0f}".format(today_amount) }}</small>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions for Cashier -->
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-6 col-md-3 animate-in">
+        <a href="{{ url_for('add_member') }}" class="text-decoration-none">
+            <div class="card-custom text-center p-4">
+                <div class="stat-icon mx-auto mb-2" style="width: 56px; height: 56px; background: #e8f5e9; color: #388e3c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    <i class="bi bi-person-plus"></i>
+                </div>
+                <h6 class="mb-0">Add Member</h6>
+                <small class="text-muted">Register new member</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3 animate-in animate-in-delay-1">
+        <a href="{{ url_for('apply_loan') }}" class="text-decoration-none">
+            <div class="card-custom text-center p-4">
+                <div class="stat-icon mx-auto mb-2" style="width: 56px; height: 56px; background: #fff3e0; color: #e65100; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    <i class="bi bi-plus-circle"></i>
+                </div>
+                <h6 class="mb-0">Apply Loan</h6>
+                <small class="text-muted">New loan application</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3 animate-in animate-in-delay-2">
+        <a href="{{ url_for('add_transaction') }}" class="text-decoration-none">
+            <div class="card-custom text-center p-4">
+                <div class="stat-icon mx-auto mb-2" style="width: 56px; height: 56px; background: #e3f2fd; color: #0d47a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    <i class="bi bi-cash"></i>
+                </div>
+                <h6 class="mb-0">Transaction</h6>
+                <small class="text-muted">Deposit / Withdraw</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3 animate-in animate-in-delay-3">
+        <a href="{{ url_for('members') }}" class="text-decoration-none">
+            <div class="card-custom text-center p-4">
+                <div class="stat-icon mx-auto mb-2" style="width: 56px; height: 56px; background: #f3e5f5; color: #6a1b9a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    <i class="bi bi-search"></i>
+                </div>
+                <h6 class="mb-0">Find Member</h6>
+                <small class="text-muted">Search members</small>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row g-3 g-md-4">
+    <div class="col-lg-7 animate-in">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-clock-history"></i> Recent Transactions</h5>
+                <a href="{{ url_for('transactions') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body-custom p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Member</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in recent_transactions %}
+                            <tr>
+                                <td><small>{{ txn.transaction_date.strftime('%H:%M') }}</small></td>
+                                <td>{{ txn.member.name[:15] }}{% if txn.member.name|length > 15 %}...{% endif %}</td>
+                                <td>
+                                    <span class="badge-custom {% if txn.type == 'deposit' %}active{% elif txn.type == 'withdrawal' %}inactive{% elif txn.type == 'loan_disbursement' %}pending{% else %}overdue{% endif %}">
+                                        {{ txn.type.replace('_', ' ')[:10] }}
+                                    </span>
+                                </td>
+                                <td>UGX {{ "{:,.0f}".format(txn.amount) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 animate-in animate-in-delay-2">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-people"></i> Recent Members</h5>
+                <a href="{{ url_for('members') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body-custom p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in recent_members %}
+                            <tr>
+                                <td><a href="{{ url_for('member_detail', id=member.id) }}">{{ member.name[:15] }}{% if member.name|length > 15 %}...{% endif %}</a></td>
+                                <td>{{ member.phone or 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loan Stats -->
+<div class="row mt-3 g-3 g-md-4">
+    <div class="col-12 animate-in animate-in-delay-3">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-pie-chart"></i> Loan Summary</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-2">
+                    {% for stat in loan_stats %}
+                    <div class="col-4 col-md-3">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="stat-label">{{ stat.status|title }}</div>
+                            <h5 class="mb-0">{{ stat.count }}</h5>
+                            <small class="text-muted">UGX {{ "{:,.0f}".format(stat.balance or 0) }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
