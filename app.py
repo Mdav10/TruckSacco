@@ -1,24 +1,30 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
 import os
+import sys
 import random
 import string
+from datetime import datetime, timedelta
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
+# Create Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///bukuya.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
+    'pool_size': 5,
+    'max_overflow': 0
 }
 
+# Initialize database
 db = SQLAlchemy(app)
 
 # ============ MODELS ============
@@ -160,13 +166,9 @@ def dashboard():
     total_loan_balance = db.session.query(db.func.sum(Loan.balance)).scalar() or 0
     total_savings = db.session.query(db.func.sum(Member.savings)).scalar() or 0
     
-    # Recent transactions
     recent_transactions = Transaction.query.order_by(Transaction.transaction_date.desc()).limit(10).all()
-    
-    # Recent loans
     recent_loans = Loan.query.order_by(Loan.disbursed_date.desc()).limit(5).all()
     
-    # Loan stats for chart
     loan_stats = db.session.query(
         Loan.status,
         db.func.count(Loan.id).label('count'),
@@ -314,9 +316,7 @@ def apply_loan():
             flash('Member not found.', 'danger')
             return redirect(url_for('apply_loan'))
         
-        # Calculate total repayable
         total_repayable = amount + (amount * interest_rate / 100)
-        monthly_payment = total_repayable / period_months
         due_date = datetime.utcnow() + timedelta(days=period_months * 30)
         
         loan = Loan(
@@ -333,7 +333,6 @@ def apply_loan():
         
         db.session.add(loan)
         
-        # Create transaction for disbursement
         transaction = Transaction(
             member_id=member_id,
             type='loan_disbursement',
@@ -365,7 +364,6 @@ def repay_loan(id):
         flash('Amount exceeds loan balance.', 'danger')
         return redirect(url_for('loan_detail', id=id))
     
-    # Create repayment record
     repayment = LoanRepayment(
         loan_id=loan.id,
         amount=amount,
@@ -374,14 +372,12 @@ def repay_loan(id):
     )
     db.session.add(repayment)
     
-    # Update loan balance
     loan.balance -= amount
     loan.paid_amount += amount
     
     if loan.balance <= 0:
         loan.status = 'paid'
     
-    # Create transaction
     transaction = Transaction(
         member_id=loan.member_id,
         type='loan_repayment',
@@ -448,7 +444,6 @@ def add_transaction():
             flash('Member not found.', 'danger')
             return redirect(url_for('add_transaction'))
         
-        # Update member savings for deposits/withdrawals
         if type == 'deposit':
             member.savings += amount
         elif type == 'withdrawal':
@@ -477,7 +472,6 @@ def add_transaction():
 @app.route('/reports')
 @login_required
 def reports():
-    # Loan summary
     total_loans = Loan.query.count()
     active_loans = Loan.query.filter_by(status='active').count()
     paid_loans = Loan.query.filter_by(status='paid').count()
@@ -485,13 +479,11 @@ def reports():
     total_repaid = db.session.query(db.func.sum(Loan.paid_amount)).scalar() or 0
     total_outstanding = db.session.query(db.func.sum(Loan.balance)).scalar() or 0
     
-    # Member summary
     total_members = Member.query.count()
     active_members = Member.query.filter_by(status='active').count()
     total_savings = db.session.query(db.func.sum(Member.savings)).scalar() or 0
     total_share_capital = db.session.query(db.func.sum(Member.share_capital)).scalar() or 0
     
-    # Transaction summary by type
     transaction_summary = db.session.query(
         Transaction.type,
         db.func.count(Transaction.id).label('count'),
@@ -515,11 +507,9 @@ def reports():
 
 @app.route('/init_db')
 def init_db():
-    """Initialize database with admin user"""
     try:
         db.create_all()
         
-        # Check if admin exists
         admin = User.query.filter_by(username='manager').first()
         if not admin:
             admin = User(
@@ -541,7 +531,6 @@ def init_db():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # Create admin user if not exists
         admin = User.query.filter_by(username='manager').first()
         if not admin:
             admin = User(
@@ -552,6 +541,12 @@ if __name__ == '__main__':
             )
             db.session.add(admin)
             db.session.commit()
-            print("Admin user created: manager / Manager@2026")
+            print("=" * 50)
+            print("✅ BUKUYA Driver's SACCO System")
+            print("=" * 50)
+            print("👤 Admin User Created:")
+            print("   Username: manager")
+            print("   Password: Manager@2026")
+            print("=" * 50)
     
     app.run(host='0.0.0.0', port=5000, debug=True)
