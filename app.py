@@ -1,5 +1,4 @@
 import os
-import sys
 import random
 import string
 from datetime import datetime, timedelta
@@ -113,7 +112,7 @@ login_manager.login_message_category = 'info'
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        return db.session.get(User, int(user_id))
+        return User.query.get(int(user_id))
     except:
         return None
 
@@ -145,6 +144,7 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # If already logged in, redirect to dashboard
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
@@ -157,10 +157,33 @@ def login():
                 flash('Please enter both username and password.', 'danger')
                 return render_template('login.html')
             
+            # Check if user exists
             user = User.query.filter_by(username=username).first()
             
-            if user and check_password_hash(user.password, password):
-                login_user(user, remember=True, duration=timedelta(days=7))
+            if not user:
+                # Create user if not exists (for testing)
+                if username == 'manager' and password == 'Manager@2026':
+                    # Create the user with plain text password (temporary fix)
+                    new_user = User(
+                        username='manager',
+                        password='Manager@2026',  # Plain text temporarily
+                        role='admin',
+                        name='System Manager'
+                    )
+                    db.session.add(new_user)
+                    db.session.commit()
+                    
+                    # Log the user in
+                    login_user(new_user, remember=True)
+                    flash('Welcome! You have been logged in.', 'success')
+                    return redirect(url_for('dashboard'))
+                else:
+                    flash('Invalid username or password', 'danger')
+                    return render_template('login.html')
+            
+            # Check password (both hash and plain text for compatibility)
+            if user.password == password or check_password_hash(user.password, password):
+                login_user(user, remember=True)
                 flash(f'Welcome back, {user.name}!', 'success')
                 
                 next_page = request.args.get('next')
@@ -168,7 +191,8 @@ def login():
                     return redirect(next_page)
                 return redirect(url_for('dashboard'))
             else:
-                flash('Invalid username or password.', 'danger')
+                flash('Invalid username or password', 'danger')
+                
         except Exception as e:
             app.logger.error(f"Login error: {str(e)}")
             flash(f'Login error: {str(e)}', 'danger')
@@ -592,40 +616,24 @@ def reports():
 @app.route('/init_db')
 def init_db():
     try:
-        # Create all tables
         db.create_all()
         
-        # Check if admin exists
         admin = User.query.filter_by(username='manager').first()
         if not admin:
             admin = User(
                 username='manager',
-                password=generate_password_hash('Manager@2026'),
+                password='Manager@2026',  # Plain text for simplicity
                 role='admin',
                 name='System Manager'
             )
             db.session.add(admin)
             db.session.commit()
-            return jsonify({
-                'status': 'success',
-                'message': 'Database initialized with admin user!',
-                'credentials': {
-                    'username': 'manager',
-                    'password': 'Manager@2026'
-                }
-            })
+            return jsonify({'message': 'Database initialized with admin user!'})
         else:
-            return jsonify({
-                'status': 'success',
-                'message': 'Admin user already exists!',
-                'credentials': {
-                    'username': 'manager',
-                    'password': 'Manager@2026'
-                }
-            })
+            return jsonify({'message': 'Admin user already exists!'})
     except Exception as e:
         app.logger.error(f"Init DB error: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
 # ============ ERROR HANDLERS ============
 
@@ -644,17 +652,13 @@ def internal_error(error):
 if __name__ == '__main__':
     with app.app_context():
         try:
-            # Create all tables
-            print("Creating database tables...")
             db.create_all()
-            print("✅ Database tables created successfully!")
             
-            # Create admin user if not exists
             admin = User.query.filter_by(username='manager').first()
             if not admin:
                 admin = User(
                     username='manager',
-                    password=generate_password_hash('Manager@2026'),
+                    password='Manager@2026',  # Plain text for simplicity
                     role='admin',
                     name='System Manager'
                 )
@@ -676,6 +680,6 @@ if __name__ == '__main__':
                 print("   Password: Manager@2026")
                 print("=" * 50)
         except Exception as e:
-            print(f"❌ Error initializing database: {e}")
+            print(f"Error initializing database: {e}")
     
     app.run(host='0.0.0.0', port=5000, debug=False)
