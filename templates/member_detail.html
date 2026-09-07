@@ -2,30 +2,47 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h4><i class="bi bi-person-badge"></i> Member Details</h4>
+        <h5><i class="bi bi-person-badge"></i> Member Details</h5>
     </div>
     <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <p><strong>Member No:</strong> {{ member.member_no }}</p>
-                <p><strong>Name:</strong> {{ member.name }}</p>
-                <p><strong>Phone:</strong> {{ member.phone }}</p>
-                <p><strong>Truck No:</strong> {{ member.truck_no }}</p>
+        <div class="row g-3">
+            <div class="col-6">
+                <label class="text-muted small">Member No</label>
+                <p class="fw-bold">{{ member.member_no }}</p>
             </div>
-            <div class="col-md-6">
-                <p><strong>Email:</strong> {{ member.email }}</p>
-                <p><strong>Join Date:</strong> {{ member.join_date.strftime('%Y-%m-%d') }}</p>
-                <p><strong>Share Capital:</strong> UGX {{ "{:,.0f}".format(member.share_capital) }}</p>
-                <p><strong>Savings:</strong> UGX {{ "{:,.0f}".format(member.savings) }}</p>
-                <p><strong>Status:</strong> 
-                    <span class="badge {% if member.status == 'active' %}bg-success{% else %}bg-danger{% endif %}">
-                        {{ member.status }}
-                    </span>
-                </p>
+            <div class="col-6">
+                <label class="text-muted small">Status</label>
+                <p><span class="badge {% if member.status == 'active' %}bg-success{% else %}bg-danger{% endif %}">{{ member.status }}</span></p>
+            </div>
+            <div class="col-12">
+                <label class="text-muted small">Full Name</label>
+                <p class="fw-bold">{{ member.name }}</p>
+            </div>
+            <div class="col-6">
+                <label class="text-muted small">Phone</label>
+                <p>{{ member.phone }}</p>
+            </div>
+            <div class="col-6">
+                <label class="text-muted small">Email</label>
+                <p>{{ member.email }}</p>
+            </div>
+            <div class="col-6">
+                <label class="text-muted small">Share Capital</label>
+                <p class="fw-bold">UGX {{ "{:,.0f}".format(member.share_capital) }}</p>
+            </div>
+            <div class="col-6">
+                <label class="text-muted small">Savings</label>
+                <p class="fw-bold">UGX {{ "{:,.0f}".format(member.savings) }}</p>
+            </div>
+            <div class="col-12">
+                <label class="text-muted small">Join Date</label>
+                <p>{{ member.join_date.strftime('%Y-%m-%d') }}</p>
             </div>
         </div>
-        <a href="{{ url_for('members') }}" class="btn btn-secondary">Back to Members</a>
-        <a href="{{ url_for('edit_member', id=member.id) }}" class="btn btn-warning">Edit</a>
+        <div class="d-grid gap-2 mt-3">
+            <a href="{{ url_for('edit_member', id=member.id) }}" class="btn btn-warning btn-lg">Edit</a>
+            <a href="{{ url_for('members') }}" class="btn btn-secondary btn-lg">Back to Members</a>
+        </div>
     </div>
 </div>
 {% endblock %}

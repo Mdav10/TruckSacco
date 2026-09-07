@@ -2,45 +2,41 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h4><i class="bi bi-person-gear"></i> Edit Member</h4>
+        <h5><i class="bi bi-person-gear"></i> Edit Member</h5>
     </div>
     <div class="card-body">
         <form method="POST">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Full Name *</label>
-                    <input type="text" name="name" class="form-control" value="{{ member.name }}" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Phone Number</label>
-                    <input type="text" name="phone" class="form-control" value="{{ member.phone }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Truck Number</label>
-                    <input type="text" name="truck_no" class="form-control" value="{{ member.truck_no }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" value="{{ member.email }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Share Capital</label>
-                    <input type="number" name="share_capital" class="form-control" step="0.01" value="{{ member.share_capital }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Savings</label>
-                    <input type="number" name="savings" class="form-control" step="0.01" value="{{ member.savings }}">
-                </div>
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="active" {% if member.status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="inactive" {% if member.status == 'inactive' %}selected{% endif %}>Inactive</option>
-                    </select>
-                </div>
+            <div class="mb-3">
+                <label class="form-label">Full Name *</label>
+                <input type="text" name="name" class="form-control form-control-lg" value="{{ member.name }}" required>
             </div>
-            <button type="submit" class="btn btn-primary">Update Member</button>
-            <a href="{{ url_for('members') }}" class="btn btn-secondary">Cancel</a>
+            <div class="mb-3">
+                <label class="form-label">Phone Number</label>
+                <input type="text" name="phone" class="form-control form-control-lg" value="{{ member.phone }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control form-control-lg" value="{{ member.email }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Share Capital (UGX)</label>
+                <input type="number" name="share_capital" class="form-control form-control-lg" step="0.01" value="{{ member.share_capital }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Savings (UGX)</label>
+                <input type="number" name="savings" class="form-control form-control-lg" step="0.01" value="{{ member.savings }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select form-select-lg">
+                    <option value="active" {% if member.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if member.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">Update Member</button>
+                <a href="{{ url_for('members') }}" class="btn btn-secondary btn-lg">Cancel</a>
+            </div>
         </form>
     </div>
 </div>

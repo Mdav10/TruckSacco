@@ -37,7 +37,7 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='staff')
+    role = db.Column(db.String(20), default='cashier')
     name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -47,7 +47,6 @@ class Member(db.Model):
     member_no = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
     phone = db.Column(db.String(20))
-    truck_no = db.Column(db.String(20))
     email = db.Column(db.String(100))
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
     share_capital = db.Column(db.Float, default=0.0)
@@ -144,7 +143,6 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # If already logged in, redirect to dashboard
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
@@ -157,34 +155,11 @@ def login():
                 flash('Please enter both username and password.', 'danger')
                 return render_template('login.html')
             
-            # Check if user exists
             user = User.query.filter_by(username=username).first()
             
-            if not user:
-                # Create user if not exists (for testing)
-                if username == 'manager' and password == 'Manager@2026':
-                    # Create the user with plain text password (temporary fix)
-                    new_user = User(
-                        username='manager',
-                        password='Manager@2026',  # Plain text temporarily
-                        role='admin',
-                        name='System Manager'
-                    )
-                    db.session.add(new_user)
-                    db.session.commit()
-                    
-                    # Log the user in
-                    login_user(new_user, remember=True)
-                    flash('Welcome! You have been logged in.', 'success')
-                    return redirect(url_for('dashboard'))
-                else:
-                    flash('Invalid username or password', 'danger')
-                    return render_template('login.html')
-            
-            # Check password (both hash and plain text for compatibility)
-            if user.password == password or check_password_hash(user.password, password):
+            if user and user.password == password:
                 login_user(user, remember=True)
-                flash(f'Welcome back, {user.name}!', 'success')
+                flash(f'Welcome, {user.name}!', 'success')
                 
                 next_page = request.args.get('next')
                 if next_page:
@@ -192,7 +167,6 @@ def login():
                 return redirect(url_for('dashboard'))
             else:
                 flash('Invalid username or password', 'danger')
-                
         except Exception as e:
             app.logger.error(f"Login error: {str(e)}")
             flash(f'Login error: {str(e)}', 'danger')
@@ -244,6 +218,77 @@ def dashboard():
         flash(f'Error loading dashboard: {str(e)}', 'danger')
         return render_template('dashboard.html')
 
+# ============ USER MANAGEMENT (Admin Only) ============
+
+@app.route('/users')
+@login_required
+def users():
+    if current_user.role != 'admin':
+        flash('Access denied. Admin only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    users = User.query.all()
+    return render_template('users.html', users=users)
+
+@app.route('/users/add', methods=['GET', 'POST'])
+@login_required
+def add_user():
+    if current_user.role != 'admin':
+        flash('Access denied. Admin only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            username = request.form.get('username')
+            password = request.form.get('password')
+            name = request.form.get('name')
+            role = request.form.get('role')
+            
+            # Check if user exists
+            existing = User.query.filter_by(username=username).first()
+            if existing:
+                flash('Username already exists.', 'danger')
+                return redirect(url_for('add_user'))
+            
+            user = User(
+                username=username,
+                password=password,
+                name=name,
+                role=role
+            )
+            
+            db.session.add(user)
+            db.session.commit()
+            flash(f'User {username} created successfully!', 'success')
+            return redirect(url_for('users'))
+        except Exception as e:
+            app.logger.error(f"Add user error: {str(e)}")
+            flash(f'Error creating user: {str(e)}', 'danger')
+    
+    return render_template('add_user.html')
+
+@app.route('/users/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_user(id):
+    if current_user.role != 'admin':
+        flash('Access denied. Admin only.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        user = User.query.get_or_404(id)
+        if user.id == current_user.id:
+            flash('You cannot delete yourself.', 'danger')
+            return redirect(url_for('users'))
+        
+        db.session.delete(user)
+        db.session.commit()
+        flash('User deleted successfully!', 'success')
+    except Exception as e:
+        app.logger.error(f"Delete user error: {str(e)}")
+        flash(f'Error deleting user: {str(e)}', 'danger')
+    
+    return redirect(url_for('users'))
+
 # ============ MEMBER ROUTES ============
 
 @app.route('/members')
@@ -256,8 +301,7 @@ def members():
                 db.or_(
                     Member.name.ilike(f'%{search}%'),
                     Member.member_no.ilike(f'%{search}%'),
-                    Member.phone.ilike(f'%{search}%'),
-                    Member.truck_no.ilike(f'%{search}%')
+                    Member.phone.ilike(f'%{search}%')
                 )
             ).order_by(Member.join_date.desc()).all()
         else:
@@ -276,7 +320,6 @@ def add_member():
         try:
             name = request.form.get('name')
             phone = request.form.get('phone')
-            truck_no = request.form.get('truck_no')
             email = request.form.get('email')
             share_capital = float(request.form.get('share_capital', 0))
             savings = float(request.form.get('savings', 0))
@@ -285,7 +328,6 @@ def add_member():
                 member_no=generate_member_no(),
                 name=name,
                 phone=phone,
-                truck_no=truck_no,
                 email=email,
                 share_capital=share_capital,
                 savings=savings
@@ -310,7 +352,6 @@ def edit_member(id):
         try:
             member.name = request.form.get('name')
             member.phone = request.form.get('phone')
-            member.truck_no = request.form.get('truck_no')
             member.email = request.form.get('email')
             member.share_capital = float(request.form.get('share_capital', 0))
             member.savings = float(request.form.get('savings', 0))
@@ -618,19 +659,37 @@ def init_db():
     try:
         db.create_all()
         
+        # Create admin user
         admin = User.query.filter_by(username='manager').first()
         if not admin:
             admin = User(
                 username='manager',
-                password='Manager@2026',  # Plain text for simplicity
+                password='Manager@2026',
                 role='admin',
                 name='System Manager'
             )
             db.session.add(admin)
             db.session.commit()
-            return jsonify({'message': 'Database initialized with admin user!'})
-        else:
-            return jsonify({'message': 'Admin user already exists!'})
+        
+        # Create default cashier
+        cashier = User.query.filter_by(username='cashier').first()
+        if not cashier:
+            cashier = User(
+                username='cashier',
+                password='Cashier@2026',
+                role='cashier',
+                name='Default Cashier'
+            )
+            db.session.add(cashier)
+            db.session.commit()
+        
+        return jsonify({
+            'message': 'Database initialized!',
+            'users': {
+                'admin': {'username': 'manager', 'password': 'Manager@2026'},
+                'cashier': {'username': 'cashier', 'password': 'Cashier@2026'}
+            }
+        })
     except Exception as e:
         app.logger.error(f"Init DB error: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -658,27 +717,37 @@ if __name__ == '__main__':
             if not admin:
                 admin = User(
                     username='manager',
-                    password='Manager@2026',  # Plain text for simplicity
+                    password='Manager@2026',
                     role='admin',
                     name='System Manager'
                 )
                 db.session.add(admin)
                 db.session.commit()
-                print("=" * 50)
-                print("✅ BUKUYA Driver's SACCO System")
-                print("=" * 50)
-                print("👤 Admin User Created:")
-                print("   Username: manager")
-                print("   Password: Manager@2026")
-                print("=" * 50)
-            else:
-                print("=" * 50)
-                print("✅ BUKUYA Driver's SACCO System Ready")
-                print("=" * 50)
-                print("👤 Login with:")
-                print("   Username: manager")
-                print("   Password: Manager@2026")
-                print("=" * 50)
+                print("✅ Admin created: manager / Manager@2026")
+            
+            cashier = User.query.filter_by(username='cashier').first()
+            if not cashier:
+                cashier = User(
+                    username='cashier',
+                    password='Cashier@2026',
+                    role='cashier',
+                    name='Default Cashier'
+                )
+                db.session.add(cashier)
+                db.session.commit()
+                print("✅ Cashier created: cashier / Cashier@2026")
+            
+            print("=" * 50)
+            print("✅ BUKUYA Driver's SACCO System Ready")
+            print("=" * 50)
+            print("👤 Admin Login:")
+            print("   Username: manager")
+            print("   Password: Manager@2026")
+            print("")
+            print("👤 Cashier Login:")
+            print("   Username: cashier")
+            print("   Password: Cashier@2026")
+            print("=" * 50)
         except Exception as e:
             print(f"Error initializing database: {e}")
     

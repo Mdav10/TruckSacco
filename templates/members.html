@@ -1,49 +1,68 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="bi bi-people"></i> Members</h4>
-    <a href="{{ url_for('add_member') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Add Member
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5><i class="bi bi-people"></i> Members</h5>
+    <a href="{{ url_for('add_member') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-circle"></i> Add
     </a>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-hover">
-        <thead>
-            <tr>
-                <th>Member No</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Truck No</th>
-                <th>Savings</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for member in members %}
-            <tr>
-                <td><strong>{{ member.member_no }}</strong></td>
-                <td>{{ member.name }}</td>
-                <td>{{ member.phone }}</td>
-                <td>{{ member.truck_no }}</td>
-                <td>UGX {{ "{:,.0f}".format(member.savings) }}</td>
-                <td>
+<!-- Search -->
+<div class="mb-3">
+    <form method="GET">
+        <div class="input-group">
+            <input type="text" name="search" class="form-control form-control-lg" placeholder="Search members..." value="{{ search }}">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Member Cards (Mobile First) -->
+<div class="row g-2">
+    {% for member in members %}
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">{{ member.name }}</h6>
+                        <small class="text-muted">{{ member.member_no }}</small>
+                    </div>
                     <span class="badge {% if member.status == 'active' %}bg-success{% else %}bg-danger{% endif %}">
                         {{ member.status }}
                     </span>
-                </td>
-                <td>
-                    <a href="{{ url_for('member_detail', id=member.id) }}" class="btn btn-sm btn-info">
+                </div>
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <small class="text-muted">Phone</small>
+                        <p class="mb-0 small">{{ member.phone or 'N/A' }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Savings</small>
+                        <p class="mb-0 small">UGX {{ "{:,.0f}".format(member.savings) }}</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-1 mt-2">
+                    <a href="{{ url_for('member_detail', id=member.id) }}" class="btn btn-sm btn-info flex-fill">
                         <i class="bi bi-eye"></i>
                     </a>
-                    <a href="{{ url_for('edit_member', id=member.id) }}" class="btn btn-sm btn-warning">
+                    <a href="{{ url_for('edit_member', id=member.id) }}" class="btn btn-sm btn-warning flex-fill">
                         <i class="bi bi-pencil"></i>
                     </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="text-center py-4">
+            <i class="bi bi-people display-4 text-muted"></i>
+            <p class="text-muted">No members found</p>
+            <a href="{{ url_for('add_member') }}" class="btn btn-primary">Add First Member</a>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
