@@ -30,6 +30,11 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 # Initialize database
 db = SQLAlchemy(app)
 
+# Make datetime available in templates
+@app.context_processor
+def inject_datetime():
+    return {'datetime': datetime}
+
 # ============ MODELS ============
 
 class User(db.Model, UserMixin):
@@ -105,8 +110,8 @@ class SystemSetting(db.Model):
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message = 'Please login to access this page.'
-login_manager.login_message_category = 'info'
+login_manager.login_message = '⚠️ Please login to access this page.'
+login_manager.login_message_category = 'warning'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -133,7 +138,7 @@ def generate_reference():
 def generate_receipt_no():
     return f"RCP{datetime.now().strftime('%Y%m%d')}{random.randint(1000, 9999)}"
 
-# ============ ROUTES ============
+# ============ PUBLIC ROUTES (NO LOGIN REQUIRED) ============
 
 @app.route('/')
 def index():
@@ -159,14 +164,14 @@ def login():
             
             if user and user.password == password:
                 login_user(user, remember=True)
-                flash(f'Welcome, {user.name}!', 'success')
+                flash(f'✅ Welcome, {user.name}!', 'success')
                 
                 next_page = request.args.get('next')
                 if next_page:
                     return redirect(next_page)
                 return redirect(url_for('dashboard'))
             else:
-                flash('Invalid username or password', 'danger')
+                flash('❌ Invalid username or password', 'danger')
         except Exception as e:
             app.logger.error(f"Login error: {str(e)}")
             flash(f'Login error: {str(e)}', 'danger')
@@ -178,13 +183,16 @@ def login():
 def logout():
     logout_user()
     session.clear()
-    flash('You have been logged out successfully.', 'info')
+    flash('✅ You have been logged out successfully.', 'info')
     return redirect(url_for('login'))
+
+# ============ PROTECTED ROUTES (LOGIN REQUIRED) ============
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
     try:
+        # Common stats
         total_members = Member.query.count()
         active_members = Member.query.filter_by(status='active').count()
         total_loans = Loan.query.count()
@@ -192,6 +200,7 @@ def dashboard():
         total_loan_amount = db.session.query(db.func.sum(Loan.amount)).scalar() or 0
         total_loan_balance = db.session.query(db.func.sum(Loan.balance)).scalar() or 0
         total_savings = db.session.query(db.func.sum(Member.savings)).scalar() or 0
+        total_share_capital = db.session.query(db.func.sum(Member.share_capital)).scalar() or 0
         
         recent_transactions = Transaction.query.order_by(Transaction.transaction_date.desc()).limit(10).all()
         recent_loans = Loan.query.order_by(Loan.disbursed_date.desc()).limit(5).all()
@@ -202,29 +211,64 @@ def dashboard():
             db.func.sum(Loan.balance).label('balance')
         ).group_by(Loan.status).all()
         
-        return render_template('dashboard.html',
-                             total_members=total_members,
-                             active_members=active_members,
-                             total_loans=total_loans,
-                             active_loans=active_loans,
-                             total_loan_amount=total_loan_amount,
-                             total_loan_balance=total_loan_balance,
-                             total_savings=total_savings,
-                             recent_transactions=recent_transactions,
-                             recent_loans=recent_loans,
-                             loan_stats=loan_stats)
+        # Today's transactions
+        today = datetime.now().date()
+        today_transactions = Transaction.query.filter(
+            db.func.date(Transaction.transaction_date) == today
+        ).count()
+        today_amount = db.session.query(db.func.sum(Transaction.amount)).filter(
+            db.func.date(Transaction.transaction_date) == today
+        ).scalar() or 0
+        
+        # Recent members (for cashier view)
+        recent_members = Member.query.order_by(Member.join_date.desc()).limit(5).all()
+        
+        # Role-based dashboard
+        if current_user.role == 'admin':
+            total_users = User.query.count()
+            return render_template('dashboard_admin.html',
+                                 total_members=total_members,
+                                 active_members=active_members,
+                                 total_loans=total_loans,
+                                 active_loans=active_loans,
+                                 total_loan_amount=total_loan_amount,
+                                 total_loan_balance=total_loan_balance,
+                                 total_savings=total_savings,
+                                 total_share_capital=total_share_capital,
+                                 recent_transactions=recent_transactions,
+                                 recent_loans=recent_loans,
+                                 loan_stats=loan_stats,
+                                 today_transactions=today_transactions,
+                                 today_amount=today_amount,
+                                 total_users=total_users,
+                                 recent_members=recent_members)
+        else:
+            return render_template('dashboard_cashier.html',
+                                 total_members=total_members,
+                                 active_members=active_members,
+                                 total_loans=total_loans,
+                                 active_loans=active_loans,
+                                 total_loan_amount=total_loan_amount,
+                                 total_loan_balance=total_loan_balance,
+                                 total_savings=total_savings,
+                                 recent_transactions=recent_transactions,
+                                 recent_loans=recent_loans,
+                                 loan_stats=loan_stats,
+                                 today_transactions=today_transactions,
+                                 today_amount=today_amount,
+                                 recent_members=recent_members)
     except Exception as e:
         app.logger.error(f"Dashboard error: {str(e)}")
         flash(f'Error loading dashboard: {str(e)}', 'danger')
-        return render_template('dashboard.html')
+        return render_template('dashboard_admin.html' if current_user.role == 'admin' else 'dashboard_cashier.html')
 
-# ============ USER MANAGEMENT (Admin Only) ============
+# ============ USER MANAGEMENT (Admin Only - Login Required) ============
 
 @app.route('/users')
 @login_required
 def users():
     if current_user.role != 'admin':
-        flash('Access denied. Admin only.', 'danger')
+        flash('⛔ Access denied. Admin only.', 'danger')
         return redirect(url_for('dashboard'))
     
     users = User.query.all()
@@ -234,7 +278,7 @@ def users():
 @login_required
 def add_user():
     if current_user.role != 'admin':
-        flash('Access denied. Admin only.', 'danger')
+        flash('⛔ Access denied. Admin only.', 'danger')
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
@@ -244,7 +288,6 @@ def add_user():
             name = request.form.get('name')
             role = request.form.get('role')
             
-            # Check if user exists
             existing = User.query.filter_by(username=username).first()
             if existing:
                 flash('Username already exists.', 'danger')
@@ -259,7 +302,7 @@ def add_user():
             
             db.session.add(user)
             db.session.commit()
-            flash(f'User {username} created successfully!', 'success')
+            flash(f'✅ User {username} created successfully!', 'success')
             return redirect(url_for('users'))
         except Exception as e:
             app.logger.error(f"Add user error: {str(e)}")
@@ -271,25 +314,25 @@ def add_user():
 @login_required
 def delete_user(id):
     if current_user.role != 'admin':
-        flash('Access denied. Admin only.', 'danger')
+        flash('⛔ Access denied. Admin only.', 'danger')
         return redirect(url_for('dashboard'))
     
     try:
         user = User.query.get_or_404(id)
         if user.id == current_user.id:
-            flash('You cannot delete yourself.', 'danger')
+            flash('❌ You cannot delete yourself.', 'danger')
             return redirect(url_for('users'))
         
         db.session.delete(user)
         db.session.commit()
-        flash('User deleted successfully!', 'success')
+        flash('✅ User deleted successfully!', 'success')
     except Exception as e:
         app.logger.error(f"Delete user error: {str(e)}")
         flash(f'Error deleting user: {str(e)}', 'danger')
     
     return redirect(url_for('users'))
 
-# ============ MEMBER ROUTES ============
+# ============ MEMBER ROUTES (Login Required) ============
 
 @app.route('/members')
 @login_required
@@ -335,7 +378,7 @@ def add_member():
             
             db.session.add(member)
             db.session.commit()
-            flash(f'Member {name} added successfully!', 'success')
+            flash(f'✅ Member {name} added successfully!', 'success')
             return redirect(url_for('members'))
         except Exception as e:
             app.logger.error(f"Add member error: {str(e)}")
@@ -358,7 +401,7 @@ def edit_member(id):
             member.status = request.form.get('status')
             
             db.session.commit()
-            flash('Member updated successfully!', 'success')
+            flash('✅ Member updated successfully!', 'success')
             return redirect(url_for('members'))
         except Exception as e:
             app.logger.error(f"Edit member error: {str(e)}")
@@ -372,12 +415,12 @@ def delete_member(id):
     try:
         member = Member.query.get_or_404(id)
         if member.loans:
-            flash('Cannot delete member with active loans.', 'danger')
+            flash('❌ Cannot delete member with active loans.', 'danger')
             return redirect(url_for('members'))
         
         db.session.delete(member)
         db.session.commit()
-        flash('Member deleted successfully!', 'success')
+        flash('✅ Member deleted successfully!', 'success')
     except Exception as e:
         app.logger.error(f"Delete member error: {str(e)}")
         flash(f'Error deleting member: {str(e)}', 'danger')
@@ -390,7 +433,7 @@ def member_detail(id):
     member = Member.query.get_or_404(id)
     return render_template('member_detail.html', member=member)
 
-# ============ LOAN ROUTES ============
+# ============ LOAN ROUTES (Login Required) ============
 
 @app.route('/loans')
 @login_required
@@ -465,7 +508,7 @@ def apply_loan():
             db.session.add(transaction)
             
             db.session.commit()
-            flash(f'Loan {loan.loan_no} applied successfully!', 'success')
+            flash(f'✅ Loan {loan.loan_no} applied successfully!', 'success')
             return redirect(url_for('loans'))
         except Exception as e:
             app.logger.error(f"Apply loan error: {str(e)}")
@@ -487,7 +530,7 @@ def repay_loan(id):
         amount = float(request.form.get('amount'))
         
         if amount > loan.balance:
-            flash('Amount exceeds loan balance.', 'danger')
+            flash('❌ Amount exceeds loan balance.', 'danger')
             return redirect(url_for('loan_detail', id=id))
         
         repayment = LoanRepayment(
@@ -514,7 +557,7 @@ def repay_loan(id):
         db.session.add(transaction)
         
         db.session.commit()
-        flash(f'Payment of {amount} recorded successfully!', 'success')
+        flash(f'✅ Payment of UGX {amount:,.0f} recorded successfully!', 'success')
     except Exception as e:
         app.logger.error(f"Repay loan error: {str(e)}")
         flash(f'Error recording payment: {str(e)}', 'danger')
@@ -527,19 +570,19 @@ def delete_loan(id):
     try:
         loan = Loan.query.get_or_404(id)
         if loan.status == 'paid':
-            flash('Cannot delete paid loan.', 'danger')
+            flash('❌ Cannot delete paid loan.', 'danger')
             return redirect(url_for('loans'))
         
         db.session.delete(loan)
         db.session.commit()
-        flash('Loan deleted successfully!', 'success')
+        flash('✅ Loan deleted successfully!', 'success')
     except Exception as e:
         app.logger.error(f"Delete loan error: {str(e)}")
         flash(f'Error deleting loan: {str(e)}', 'danger')
     
     return redirect(url_for('loans'))
 
-# ============ TRANSACTION ROUTES ============
+# ============ TRANSACTION ROUTES (Login Required) ============
 
 @app.route('/transactions')
 @login_required
@@ -589,7 +632,7 @@ def add_transaction():
                 member.savings += amount
             elif type == 'withdrawal':
                 if member.savings < amount:
-                    flash('Insufficient savings.', 'danger')
+                    flash('❌ Insufficient savings.', 'danger')
                     return redirect(url_for('add_transaction'))
                 member.savings -= amount
             
@@ -603,7 +646,7 @@ def add_transaction():
             
             db.session.add(transaction)
             db.session.commit()
-            flash('Transaction recorded successfully!', 'success')
+            flash('✅ Transaction recorded successfully!', 'success')
             return redirect(url_for('transactions'))
         except Exception as e:
             app.logger.error(f"Add transaction error: {str(e)}")
@@ -611,7 +654,7 @@ def add_transaction():
     
     return render_template('add_transaction.html', members=members)
 
-# ============ REPORTS ROUTES ============
+# ============ REPORTS ROUTES (Login Required) ============
 
 @app.route('/reports')
 @login_required
@@ -652,7 +695,7 @@ def reports():
         flash(f'Error loading reports: {str(e)}', 'danger')
         return render_template('reports.html')
 
-# ============ INIT DATABASE ============
+# ============ INIT DATABASE (Public - For Setup Only) ============
 
 @app.route('/init_db')
 def init_db():
@@ -684,7 +727,7 @@ def init_db():
             db.session.commit()
         
         return jsonify({
-            'message': 'Database initialized!',
+            'message': '✅ Database initialized!',
             'users': {
                 'admin': {'username': 'manager', 'password': 'Manager@2026'},
                 'cashier': {'username': 'cashier', 'password': 'Cashier@2026'}
