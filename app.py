@@ -220,7 +220,7 @@ def dashboard():
             db.func.date(Transaction.transaction_date) == today
         ).scalar() or 0
         
-        # Recent members (for cashier view)
+        # Recent members
         recent_members = Member.query.order_by(Member.join_date.desc()).limit(5).all()
         
         # Role-based dashboard
@@ -260,7 +260,8 @@ def dashboard():
     except Exception as e:
         app.logger.error(f"Dashboard error: {str(e)}")
         flash(f'Error loading dashboard: {str(e)}', 'danger')
-        return render_template('dashboard_admin.html' if current_user.role == 'admin' else 'dashboard_cashier.html')
+        # Fallback to a simple dashboard template if the main one fails
+        return render_template('dashboard_fallback.html', error=str(e))
 
 # ============ USER MANAGEMENT (Admin Only - Login Required) ============
 
