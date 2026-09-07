@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-coin"></i> Loans</h4>
+    <a href="{{ url_for('apply_loan') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Apply Loan
+    </a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Loan No</th>
+                <th>Member</th>
+                <th>Amount</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan in loans %}
+            <tr>
+                <td><strong>{{ loan.loan_no }}</strong></td>
+                <td>{{ loan.member.name }}</td>
+                <td>UGX {{ "{:,.0f}".format(loan.amount) }}</td>
+                <td>UGX {{ "{:,.0f}".format(loan.balance) }}</td>
+                <td>
+                    <span class="badge {% if loan.status == 'active' %}bg-warning{% elif loan.status == 'paid' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ loan.status }}
+                    </span>
+                </td>
+                <td>{{ loan.due_date.strftime('%Y-%m-%d') if loan.due_date else 'N/A' }}</td>
+                <td>
+                    <a href="{{ url_for('loan_detail', id=loan.id) }}" class="btn btn-sm btn-info">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

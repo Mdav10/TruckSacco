@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4><i class="bi bi-file-text"></i> Loan Details</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Loan No:</strong> {{ loan.loan_no }}</p>
+                <p><strong>Member:</strong> {{ loan.member.name }}</p>
+                <p><strong>Amount:</strong> UGX {{ "{:,.0f}".format(loan.amount) }}</p>
+                <p><strong>Balance:</strong> UGX {{ "{:,.0f}".format(loan.balance) }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Interest Rate:</strong> {{ loan.interest_rate }}%</p>
+                <p><strong>Period:</strong> {{ loan.period_months }} months</p>
+                <p><strong>Total Repayable:</strong> UGX {{ "{:,.0f}".format(loan.total_repayable) }}</p>
+                <p><strong>Status:</strong> 
+                    <span class="badge {% if loan.status == 'active' %}bg-warning{% elif loan.status == 'paid' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ loan.status }}
+                    </span>
+                </p>
+                <p><strong>Due Date:</strong> {{ loan.due_date.strftime('%Y-%m-%d') if loan.due_date else 'N/A' }}</p>
+            </div>
+        </div>
+        
+        {% if loan.status == 'active' %}
+        <hr>
+        <h5>Make Repayment</h5>
+        <form method="POST" action="{{ url_for('repay_loan', id=loan.id) }}" class="row g-3">
+            <div class="col-md-6">
+                <input type="number" name="amount" class="form-control" placeholder="Amount to pay" step="0.01" required>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success">Pay</button>
+            </div>
+        </form>
+        {% endif %}
+        
+        <hr>
+        <a href="{{ url_for('loans') }}" class="btn btn-secondary">Back to Loans</a>
+    </div>
+</div>
+{% endblock %}

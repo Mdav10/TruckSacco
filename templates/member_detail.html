@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4><i class="bi bi-person-badge"></i> Member Details</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Member No:</strong> {{ member.member_no }}</p>
+                <p><strong>Name:</strong> {{ member.name }}</p>
+                <p><strong>Phone:</strong> {{ member.phone }}</p>
+                <p><strong>Truck No:</strong> {{ member.truck_no }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Email:</strong> {{ member.email }}</p>
+                <p><strong>Join Date:</strong> {{ member.join_date.strftime('%Y-%m-%d') }}</p>
+                <p><strong>Share Capital:</strong> UGX {{ "{:,.0f}".format(member.share_capital) }}</p>
+                <p><strong>Savings:</strong> UGX {{ "{:,.0f}".format(member.savings) }}</p>
+                <p><strong>Status:</strong> 
+                    <span class="badge {% if member.status == 'active' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ member.status }}
+                    </span>
+                </p>
+            </div>
+        </div>
+        <a href="{{ url_for('members') }}" class="btn btn-secondary">Back to Members</a>
+        <a href="{{ url_for('edit_member', id=member.id) }}" class="btn btn-warning">Edit</a>
+    </div>
+</div>
+{% endblock %}

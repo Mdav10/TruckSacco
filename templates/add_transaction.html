@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4><i class="bi bi-plus-circle"></i> New Transaction</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Member *</label>
+                <select name="member_id" class="form-select" required>
+                    <option value="">Select Member</option>
+                    {% for member in members %}
+                    <option value="{{ member.id }}">{{ member.name }} ({{ member.member_no }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Transaction Type *</label>
+                <select name="type" class="form-select" required>
+                    <option value="deposit">Deposit</option>
+                    <option value="withdrawal">Withdrawal</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Amount (UGX) *</label>
+                <input type="number" name="amount" class="form-control" step="0.01" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Record Transaction</button>
+            <a href="{{ url_for('transactions') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

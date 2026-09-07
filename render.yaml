@@ -10,7 +10,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: postgresql://neondb_owner:npg_8plJ6WeCVuix@ep-old-field-axh8l81l-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require
+        value: postgresql://neondb_owner:npg_Tbao6sInuL9H@ep-lucky-violet-ay1ryjm9-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require
       - key: ADMIN_USERNAME
         value: manager
       - key: ADMIN_PASSWORD

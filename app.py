@@ -34,7 +34,7 @@ db = SQLAlchemy(app)
 # ============ MODELS ============
 
 class User(db.Model, UserMixin):
-    __tablename__ = 'users'  # Explicitly set table name to avoid SQL reserved word
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)

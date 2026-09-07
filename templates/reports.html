@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-bar-chart"></i> Reports</h4>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Loan Summary</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Total Loans:</strong> {{ total_loans }}</p>
+                <p><strong>Active Loans:</strong> {{ active_loans }}</p>
+                <p><strong>Paid Loans:</strong> {{ paid_loans }}</p>
+                <p><strong>Total Disbursed:</strong> UGX {{ "{:,.0f}".format(total_disbursed) }}</p>
+                <p><strong>Total Repaid:</strong> UGX {{ "{:,.0f}".format(total_repaid) }}</p>
+                <p><strong>Total Outstanding:</strong> UGX {{ "{:,.0f}".format(total_outstanding) }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Member Summary</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Total Members:</strong> {{ total_members }}</p>
+                <p><strong>Active Members:</strong> {{ active_members }}</p>
+                <p><strong>Total Savings:</strong> UGX {{ "{:,.0f}".format(total_savings) }}</p>
+                <p><strong>Total Share Capital:</strong> UGX {{ "{:,.0f}".format(total_share_capital) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5>Transaction Summary by Type</h5>
+    </div>
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Count</th>
+                    <th>Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in transaction_summary %}
+                <tr>
+                    <td>{{ stat.type.replace('_', ' ') }}</td>
+                    <td>{{ stat.count }}</td>
+                    <td>UGX {{ "{:,.0f}".format(stat.total) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
