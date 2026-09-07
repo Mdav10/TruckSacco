@@ -592,8 +592,10 @@ def reports():
 @app.route('/init_db')
 def init_db():
     try:
+        # Create all tables
         db.create_all()
         
+        # Check if admin exists
         admin = User.query.filter_by(username='manager').first()
         if not admin:
             admin = User(
@@ -604,12 +606,26 @@ def init_db():
             )
             db.session.add(admin)
             db.session.commit()
-            return jsonify({'message': 'Database initialized with admin user!'})
+            return jsonify({
+                'status': 'success',
+                'message': 'Database initialized with admin user!',
+                'credentials': {
+                    'username': 'manager',
+                    'password': 'Manager@2026'
+                }
+            })
         else:
-            return jsonify({'message': 'Admin user already exists!'})
+            return jsonify({
+                'status': 'success',
+                'message': 'Admin user already exists!',
+                'credentials': {
+                    'username': 'manager',
+                    'password': 'Manager@2026'
+                }
+            })
     except Exception as e:
         app.logger.error(f"Init DB error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # ============ ERROR HANDLERS ============
 
@@ -629,7 +645,9 @@ if __name__ == '__main__':
     with app.app_context():
         try:
             # Create all tables
+            print("Creating database tables...")
             db.create_all()
+            print("✅ Database tables created successfully!")
             
             # Create admin user if not exists
             admin = User.query.filter_by(username='manager').first()
@@ -658,6 +676,6 @@ if __name__ == '__main__':
                 print("   Password: Manager@2026")
                 print("=" * 50)
         except Exception as e:
-            print(f"Error initializing database: {e}")
+            print(f"❌ Error initializing database: {e}")
     
     app.run(host='0.0.0.0', port=5000, debug=False)
