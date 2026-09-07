@@ -24,7 +24,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_size': 5,
     'max_overflow': 0
 }
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
@@ -34,6 +34,7 @@ db = SQLAlchemy(app)
 # ============ MODELS ============
 
 class User(db.Model, UserMixin):
+    __tablename__ = 'users'  # Explicitly set table name to avoid SQL reserved word
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -42,6 +43,7 @@ class User(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Member(db.Model):
+    __tablename__ = 'members'
     id = db.Column(db.Integer, primary_key=True)
     member_no = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
@@ -57,8 +59,9 @@ class Member(db.Model):
     transactions = db.relationship('Transaction', backref='member', lazy=True, cascade='all, delete-orphan')
 
 class Loan(db.Model):
+    __tablename__ = 'loans'
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
     loan_no = db.Column(db.String(20), unique=True, nullable=False)
     amount = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, default=5.0)
@@ -74,16 +77,18 @@ class Loan(db.Model):
     repayments = db.relationship('LoanRepayment', backref='loan', lazy=True, cascade='all, delete-orphan')
 
 class LoanRepayment(db.Model):
+    __tablename__ = 'loan_repayments'
     id = db.Column(db.Integer, primary_key=True)
-    loan_id = db.Column(db.Integer, db.ForeignKey('loan.id'), nullable=False)
+    loan_id = db.Column(db.Integer, db.ForeignKey('loans.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     paid_date = db.Column(db.DateTime, default=datetime.utcnow)
     balance_after = db.Column(db.Float)
     receipt_no = db.Column(db.String(20))
 
 class Transaction(db.Model):
+    __tablename__ = 'transactions'
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
     type = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200))
@@ -91,6 +96,7 @@ class Transaction(db.Model):
     reference_no = db.Column(db.String(50), unique=True)
 
 class SystemSetting(db.Model):
+    __tablename__ = 'system_settings'
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(50), unique=True)
     value = db.Column(db.String(200))
@@ -139,7 +145,6 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # If user is already logged in, redirect to dashboard
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
@@ -152,26 +157,18 @@ def login():
                 flash('Please enter both username and password.', 'danger')
                 return render_template('login.html')
             
-            # Query user
             user = User.query.filter_by(username=username).first()
             
-            if user:
-                # Check password
-                if check_password_hash(user.password, password):
-                    # Login successful
-                    login_user(user, remember=True, duration=timedelta(days=7))
-                    flash(f'Welcome back, {user.name}!', 'success')
-                    
-                    # Redirect to dashboard
-                    next_page = request.args.get('next')
-                    if next_page:
-                        return redirect(next_page)
-                    return redirect(url_for('dashboard'))
-                else:
-                    flash('Invalid password. Please try again.', 'danger')
-            else:
-                flash('Username not found. Please check your credentials.', 'danger')
+            if user and check_password_hash(user.password, password):
+                login_user(user, remember=True, duration=timedelta(days=7))
+                flash(f'Welcome back, {user.name}!', 'success')
                 
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Invalid username or password.', 'danger')
         except Exception as e:
             app.logger.error(f"Login error: {str(e)}")
             flash(f'Login error: {str(e)}', 'danger')
@@ -631,7 +628,10 @@ def internal_error(error):
 if __name__ == '__main__':
     with app.app_context():
         try:
+            # Create all tables
             db.create_all()
+            
+            # Create admin user if not exists
             admin = User.query.filter_by(username='manager').first()
             if not admin:
                 admin = User(
