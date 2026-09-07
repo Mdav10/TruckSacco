@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bukuya-sacco
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        value: bukuya-sacco-secret-key-2026-very-secure
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_8plJ6WeCVuix@ep-old-field-axh8l81l-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require
+      - key: ADMIN_USERNAME
+        value: manager
+      - key: ADMIN_PASSWORD
+        value: Manager@2026
