@@ -4,7 +4,7 @@ import random
 import string
 from datetime import datetime, timedelta
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -24,6 +24,9 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_size': 5,
     'max_overflow': 0
 }
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -99,11 +102,12 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please login to access this page.'
+login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
     except:
         return None
 
@@ -135,24 +139,42 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # If user is already logged in, redirect to dashboard
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
         try:
-            username = request.form.get('username')
-            password = request.form.get('password')
+            username = request.form.get('username', '').strip()
+            password = request.form.get('password', '').strip()
+            
+            if not username or not password:
+                flash('Please enter both username and password.', 'danger')
+                return render_template('login.html')
+            
+            # Query user
             user = User.query.filter_by(username=username).first()
             
-            if user and check_password_hash(user.password, password):
-                login_user(user)
-                flash('Login successful!', 'success')
-                return redirect(url_for('dashboard'))
+            if user:
+                # Check password
+                if check_password_hash(user.password, password):
+                    # Login successful
+                    login_user(user, remember=True, duration=timedelta(days=7))
+                    flash(f'Welcome back, {user.name}!', 'success')
+                    
+                    # Redirect to dashboard
+                    next_page = request.args.get('next')
+                    if next_page:
+                        return redirect(next_page)
+                    return redirect(url_for('dashboard'))
+                else:
+                    flash('Invalid password. Please try again.', 'danger')
             else:
-                flash('Invalid username or password', 'danger')
+                flash('Username not found. Please check your credentials.', 'danger')
+                
         except Exception as e:
             app.logger.error(f"Login error: {str(e)}")
-            flash('An error occurred during login. Please try again.', 'danger')
+            flash(f'Login error: {str(e)}', 'danger')
     
     return render_template('login.html')
 
@@ -160,7 +182,8 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.', 'info')
+    session.clear()
+    flash('You have been logged out successfully.', 'info')
     return redirect(url_for('login'))
 
 @app.route('/dashboard')
@@ -623,6 +646,14 @@ if __name__ == '__main__':
                 print("✅ BUKUYA Driver's SACCO System")
                 print("=" * 50)
                 print("👤 Admin User Created:")
+                print("   Username: manager")
+                print("   Password: Manager@2026")
+                print("=" * 50)
+            else:
+                print("=" * 50)
+                print("✅ BUKUYA Driver's SACCO System Ready")
+                print("=" * 50)
+                print("👤 Login with:")
                 print("   Username: manager")
                 print("   Password: Manager@2026")
                 print("=" * 50)
